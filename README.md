@@ -1,0 +1,2 @@
+# Cheatsheet_for_Installation_of_Tool
+Cheatsheet_for_Installation_of_Tool for devops 
