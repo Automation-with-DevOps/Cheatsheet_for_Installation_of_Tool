@@ -1,0 +1,88 @@
+---
+
+- name: update
+  command: "yum update"
+
+- name: upgrade
+  command: "yum upgrade"
+
+- name: Install Java 
+  yum: 
+    name: java-1.8.*
+    state: present
+
+- name: Ensure tomcat user and group are present
+  ansible.builtin.group:
+    name: tomcat
+    state: present
+
+- name: adding tomcat user   
+  ansible.builtin.user:
+    name: tomcat
+    group: tomcat
+    home: /opt/tomcat
+    shell: /bin/true
+
+#- name: Download Tomcat
+  #ansible.builtin.get_url:
+    #url: https://dlcdn.apache.org/tomcat/tomcat-9/v9.0.98/bin/apache-tomcat-9.0.98.tar.gz
+    #dest: /tmp/apache-tomcat-9.0.98.tar.gz
+
+- name: Extract Tomcat
+  ansible.builtin.unarchive:
+    src: https://dlcdn.apache.org/tomcat/tomcat-9/v9.0.98/bin/apache-tomcat-9.0.98.tar.gz
+    dest: /opt/tomcat/
+    remote_src: true
+
+- name: Set executable permissions on startup script 
+  ansible.builtin.file: 
+    path: /opt/tomcat/apache-tomcat-9.0.98/bin/startup.sh 
+    mode: '0750' 
+    owner: tomcat 
+    group: tomcat
+  
+- name: Set executable permissions on shutdown script 
+  ansible.builtin.file: 
+    path: /opt/tomcat/apache-tomcat-9.0.98/bin/shutdown.sh 
+    mode: '0750' 
+    owner: tomcat 
+    group: tomcat
+
+- name: Ensure tomcat owns the Tomcat directory 
+  ansible.builtin.command: 
+    cmd: chown -R tomcat:tomcat /opt/tomcat/apache-tomcat-9.0.98
+
+- name: Ensure tomcat.service file is in place
+  ansible.builtin.copy:
+    src: tomcat.service
+    dest: /etc/systemd/system/tomcat.service
+    owner: root
+    group: root
+    mode: '0644'
+
+#- name: Configure Tomcat to listen on port {{ tomcat_port }}
+# ansible.builtin.lineinfile:
+#    path: /opt/tomcat/apache-tomcat-9.0.98/conf/server.xml
+#    regexp: '(<Connector port=").*(" protocol="HTTP/1.1")'
+#    line: '\1{{ tomcat_port }}\2'
+#  register: tomcat_config_changed
+
+- name: Configure Tomcat to listen on port {{ tomcat_port }}
+  ansible.builtin.replace:
+    path: /opt/tomcat/apache-tomcat-9.0.98/conf/server.xml
+    regexp: '<Connector port=".*" protocol="HTTP/1.1"'
+    replace: '<Connector port="{{ tomcat_port }}" protocol="HTTP/1.1"'
+  register: tomcat_config_changed
+
+- name: Restart Tomcat if configuration changed 
+  ansible.builtin.systemd: 
+    name: tomcat 
+    state: restarted 
+  when: tomcat_config_changed.changed
+
+- name: Start and enable Tomcat service
+  ansible.builtin.systemd:
+    name: tomcat
+    enabled: yes
+    state: started
+  when: tomcat_config_changed.changed

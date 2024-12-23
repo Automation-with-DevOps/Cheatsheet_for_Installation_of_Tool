@@ -1,0 +1,6 @@
+
+[dev]
+slave
+
+[dev:vars] 
+tomcat_port=8083

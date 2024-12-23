@@ -1,0 +1,4 @@
+---
+# defaults file for tomcat
+#
+tomcat_port: 8080
